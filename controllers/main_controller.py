@@ -65,11 +65,12 @@ class MainController:
     # region workers
 
     def initGL(self):
-        self.view.glWidget.createParticles(500)
-        self.updateScene()
+        self.view.glWidget.createParticles(2000)
+        # self.updateScene()
 
     def updateScene(self):
         # redraw the particles
+        return
         self.view.glWidget.update()
 
     def loadFile(self, path: str):

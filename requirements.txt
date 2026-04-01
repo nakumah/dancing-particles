@@ -4,3 +4,4 @@ pandas
 qtawesome
 librosa
 PyOpenGL
+pyqtgraph

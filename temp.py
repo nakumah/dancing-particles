@@ -38,6 +38,7 @@ class GLWidget(QOpenGLWidget):
     def update_scene(self):
         if self.audio:
             energy, color = self.audio.step()
+
             for p in self.particles:
                 p.update(energy)
         self.update()
