@@ -1,10 +1,14 @@
 import os.path
 
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QFileDialog
 
+from core.app_colors import appColors
 from core.audio_analyzer import AudioAnalyzer
 from core.audio_analyzer_thread import AudioAnalyzerThread
+from core.color_sampling import sample_gradient
+from core.particles import create_particles_on_sphere
 from views.main_window import VMainWindow
 
 
@@ -19,8 +23,14 @@ class MainController:
         self.timer.setSingleShot(False)
         self.timer.timeout.connect(self.__handleTimeElapsed)
 
+        self.excitationColors = [
+            QColor(appColors.tertiary_rbg).getRgbF(),
+            QColor(appColors.success_rbg).getRgbF(),
+            QColor(appColors.danger_rbg).getRgbF()
+        ]
+
         self.view.progressBar.hide()
-        self.view.progressBar.setRange(0, 0) # indeterminate
+        self.view.progressBar.setRange(0, 0)  # indeterminate
 
         self.initGL()
         self.setView(view)
@@ -40,12 +50,11 @@ class MainController:
         if not self.audioAnalyzer:
             return
 
-        energy, color = self.audioAnalyzer.step()
-        for p in self.view.glWidget.particles:
-            p.update(energy)
-
-        self.updateScene()
-
+        try:
+            self.updateParticles()
+        except Exception as e:
+            self.timer.stop()
+            raise Exception("Failed to update particles") from e
 
     def __handleLoadClick(self):
         path, _ = QFileDialog.getOpenFileName(self.view, "Select MP3", "", "Audio Files (*.mp3 *.wav)")
@@ -58,20 +67,28 @@ class MainController:
         self.timer.stop()
 
     def __handleStartClicked(self):
-        self.timer.start(16)
+        self.timer.start(16 * 2) # ~ 60 fps
 
     # endregion
 
     # region workers
 
     def initGL(self):
-        self.view.glWidget.createParticles(2000)
-        # self.updateScene()
+        particles = create_particles_on_sphere(cols=15, rows=60)
+        self.view.glWidget.setParticles(particles)
 
-    def updateScene(self):
-        # redraw the particles
-        return
-        self.view.glWidget.update()
+    def updateParticles(self):
+
+        assert isinstance(self.audioAnalyzer, AudioAnalyzer)
+
+        energy, colorLevel = self.audioAnalyzer.step()
+
+        colorRGB = sample_gradient(self.excitationColors, colorLevel)
+        # colorRGBA = (*colorRGB, max(0.0, min(1.0, energy)))
+        colorRGBA = (*colorRGB, 1.0)
+
+        for p in self.view.glWidget.particles():
+            p.update_ii(energy, colorRGBA)
 
     def loadFile(self, path: str):
         thread = AudioAnalyzerThread(filePath=path)
@@ -93,6 +110,7 @@ class MainController:
         thread.finished.connect(on_finished)
 
         thread.start()
+
     # endregion
 
     # region setters
@@ -102,4 +120,3 @@ class MainController:
         self.view.resize(800, 600)
 
     # endregion
-

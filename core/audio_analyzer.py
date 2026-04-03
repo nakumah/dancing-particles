@@ -28,6 +28,6 @@ class AudioAnalyzer:
         r = self.rms[self.frame]
         c = self.centroid[self.frame]
         self.frame += 1
-        return r, c
+        return float(r), float(c)
 
 

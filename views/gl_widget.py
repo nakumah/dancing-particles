@@ -1,12 +1,9 @@
-from PySide6.QtGui import QColor
-from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtGui import QColor, QVector3D, QMatrix4x4, QVector2D
-from PySide6.QtCore import QTimer, Qt
-
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from OpenGL.GLUT import (glutBitmapCharacter, GLUT_BITMAP_HELVETICA_18, glutInit, glutInitDisplayMode, GLUT_DOUBLE,
-                         GLUT_RGB)
+from OpenGL.GLUT import (GLUT_BITMAP_HELVETICA_18)
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QColor, QVector3D, QMatrix4x4, QVector2D
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from core.app_colors import appColors
 from models.camera import Camera
@@ -30,29 +27,17 @@ class GLWidget(QOpenGLWidget):
         self.__camera.setFocusPoint(QVector3D(0, 0, 0))
 
         self.__mousePos: QVector2D = QVector2D(0, 0)
-        self.particles = []
+        self.__particles: list[Particle] = []
 
     # region openGL
 
     def initializeGL(self, /):
-        glClearColor(self.__backgroundColor.redF(), self.__backgroundColor.greenF(),
-                     self.__backgroundColor.blueF(), 1.0)
-        glEnable(GL_DEPTH_TEST)
 
-        # Enable blending for transparency
+        glClearColor(self.__backgroundColor.redF(), self.__backgroundColor.greenF(), self.__backgroundColor.blueF(), 1.0)
+        glEnable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
         glPointSize(3)
-
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-
-        aspect = self.width() / max(1, self.height())
-        gluPerspective(45.0, aspect, 0.1, 100.0)
-
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
 
     def paintGL(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -64,9 +49,22 @@ class GLWidget(QOpenGLWidget):
         )
 
         glBegin(GL_POINTS)
-        for p in self.particles:
+        for p in self.__particles:
             p.draw()
         glEnd()
+
+    def resizeGL(self, w, h, /):
+        h = max(1, h)
+
+        glViewport(0, 0, w, h)
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+
+        aspect = w / h
+        gluPerspective(45.0, aspect, 0.1, 100.0)
+
+        glMatrixMode(GL_MODELVIEW)
 
     # endregion
 
@@ -118,9 +116,9 @@ class GLWidget(QOpenGLWidget):
             pdr.setZ(-diff.x() / self.width() * right.z())
 
             pdu = QVector3D(up)
-            pdu.setX(-diff.y() / self.height() * up.x())
-            pdu.setY(-diff.y() / self.height() * up.y())
-            pdu.setZ(-diff.y() / self.height() * up.z())
+            pdu.setX(diff.y() / self.height() * up.x())
+            pdu.setY(diff.y() / self.height() * up.y())
+            pdu.setZ(diff.y() / self.height() * up.z())
             panDelta = pdr + pdu
 
             self.__camera.setLocation(self.__camera.location() + panDelta)
@@ -143,9 +141,6 @@ class GLWidget(QOpenGLWidget):
 
     # region workers
 
-    def createParticles(self, count: int):
-        self.particles = [Particle() for _ in range(count)]
-
     def __resetCamera(self):
         self.__camera.setFocusPoint(QVector3D(0, 0, 0))
 
@@ -154,4 +149,18 @@ class GLWidget(QOpenGLWidget):
     # region event handlers
     def __handleFrameTimer(self):
         self.update()
+
+    # endregion
+
+    # region setters
+
+    def setParticles(self, particles: list[Particle]):
+        self.__particles = particles
+
+    # endregion
+
+    # region getters
+
+    def particles(self) -> list[Particle]:
+        return self.__particles
     # endregion
