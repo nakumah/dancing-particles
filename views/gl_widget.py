@@ -6,8 +6,9 @@ from PySide6.QtGui import QColor, QVector3D, QMatrix4x4, QVector2D
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from core.app_colors import appColors
+from models.axes import Axes
 from models.camera import Camera
-from models.particle import Particle
+from models.particles.particle import Particle
 
 
 class GLWidget(QOpenGLWidget):
@@ -26,6 +27,8 @@ class GLWidget(QOpenGLWidget):
         self.__camera.setLocation(QVector3D(0, 0, 10))  # or 10
         self.__camera.setFocusPoint(QVector3D(0, 0, 0))
 
+        self.__axes: Axes = Axes(scale=1.0)
+
         self.__mousePos: QVector2D = QVector2D(0, 0)
         self.__particles: list[Particle] = []
 
@@ -38,6 +41,8 @@ class GLWidget(QOpenGLWidget):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glPointSize(3)
+
+        self.__axes.initializeGL()
 
     def paintGL(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -52,6 +57,9 @@ class GLWidget(QOpenGLWidget):
         for p in self.__particles:
             p.draw()
         glEnd()
+
+        self.__axes.draw(self.__camera)
+
 
     def resizeGL(self, w, h, /):
         h = max(1, h)

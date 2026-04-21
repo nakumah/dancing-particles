@@ -7,8 +7,8 @@ from PySide6.QtWidgets import QApplication, QFileDialog
 from core.app_colors import appColors
 from core.audio_analyzer import AudioAnalyzer
 from core.audio_analyzer_thread import AudioAnalyzerThread
-from core.color_sampling import sample_gradient
-from core.particles import create_particles_on_sphere
+
+from core.particle_simulator import ParticleSimulator
 from views.main_window import VMainWindow
 
 
@@ -19,9 +19,9 @@ class MainController:
         self.app = app
 
         self.audioAnalyzer: AudioAnalyzer | None = None
+        self.particleSimulator: ParticleSimulator = ParticleSimulator()
         self.timer = QTimer()
         self.timer.setSingleShot(False)
-        self.timer.timeout.connect(self.__handleTimeElapsed)
 
         self.excitationColors = [
             QColor(appColors.tertiary_rbg).getRgbF(),
@@ -39,6 +39,7 @@ class MainController:
     # region configure
 
     def __configure(self):
+        self.timer.timeout.connect(self.__handleTimeElapsed)
         self.view.loadBtn.clicked.connect(self.__handleLoadClick)
         self.view.stopBtn.clicked.connect(self.__handleStopClicked)
         self.view.startBtn.clicked.connect(self.__handleStartClicked)
@@ -47,9 +48,6 @@ class MainController:
 
     # region event handlers
     def __handleTimeElapsed(self):
-        if not self.audioAnalyzer:
-            return
-
         try:
             self.updateParticles()
         except Exception as e:
@@ -74,21 +72,16 @@ class MainController:
     # region workers
 
     def initGL(self):
-        particles = create_particles_on_sphere(cols=15, rows=60)
-        self.view.glWidget.setParticles(particles)
+        self.particleSimulator.spawnParticles()
+        self.view.glWidget.setParticles(self.particleSimulator.particles())
 
     def updateParticles(self):
+        # advance forward in time
+        timeStep = 1/60
+        self.particleSimulator.advance(timeStep)
 
-        assert isinstance(self.audioAnalyzer, AudioAnalyzer)
-
-        energy, colorLevel = self.audioAnalyzer.step()
-
-        colorRGB = sample_gradient(self.excitationColors, colorLevel)
-        # colorRGBA = (*colorRGB, max(0.0, min(1.0, energy)))
-        colorRGBA = (*colorRGB, 1.0)
-
-        for p in self.view.glWidget.particles():
-            p.update_ii(energy, colorRGBA)
+        # update the particles in the view
+        self.view.glWidget.setParticles(self.particleSimulator.particles())
 
     def loadFile(self, path: str):
         thread = AudioAnalyzerThread(filePath=path)

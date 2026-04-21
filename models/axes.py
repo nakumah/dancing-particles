@@ -1,4 +1,3 @@
-import os
 import numpy as np
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QColor
@@ -7,7 +6,6 @@ from OpenGL.GL.shaders import compileProgram, compileShader
 
 from core.app_colors import appColors
 from models.camera import Camera
-from .text_renderer import FontRenderer, TextRenderer  # new helper modules
 
 # ───────────────────────────────────────────────
 # SHADERS FOR AXIS LINES
@@ -59,11 +57,6 @@ class Axes(QObject):
         self.vao = None
         self.vbo = None
 
-        # text system
-        font_path = str(os.path.join(os.getcwd(), "resources", "montserrat.ttf"))
-        self.fontRenderer = FontRenderer(font_path, 50)
-        self.textRenderer = TextRenderer(self.fontRenderer, self.shader)
-
     # ───────────────────────────────────────────────
     # GL INIT
     # ───────────────────────────────────────────────
@@ -75,9 +68,6 @@ class Axes(QObject):
         )
 
         # Init font + text renderer
-        self.textRenderer.setShader(self.shader)
-        self.textRenderer.primeGL()
-        self.fontRenderer.loadCharacters()
 
         # Prepare axis geometry (3 lines)
         vertices = np.array([
@@ -133,16 +123,6 @@ class Axes(QObject):
         glDrawArrays(GL_LINES, 4, 2)
 
         glBindVertexArray(0)
-
-        # Draw text labels
-        for k, axis in self.__opts.items():
-            self.textRenderer.renderText(
-                axis["text"],
-                axis["pos"],
-                0.005,  # scale
-                (axis["color"].redF(), axis["color"].greenF(), axis["color"].blueF()),
-                mvp
-            )
 
     def setScale(self, s: float) -> None:
         self.__opts["x"]["pos"] = [s, 0, 0]

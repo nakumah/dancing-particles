@@ -1,7 +1,7 @@
 import numpy as np
 from OpenGL.GL import *
 
-class Particle:
+class ParticleSample:
     def __init__(self, pos = None):
         self.vel = np.zeros(3)
         self.alpha = 1.0
@@ -69,3 +69,4 @@ class Particle:
         glVertex3f(*self.pos)
 
     # endregion
+
